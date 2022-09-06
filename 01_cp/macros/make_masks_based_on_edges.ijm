@@ -1,0 +1,24 @@
+run("Gaussian Blur...", "sigma=1");
+run("Multiply...", "value=255");
+run("Convert to Mask");
+run("Options...", "iterations=5 count=1 black pad do=Nothing");
+run("Dilate");
+run("Dilate");
+run("Dilate");
+run("Dilate");
+run("Dilate");
+run("Dilate");
+run("Gaussian Blur...", "sigma=1");
+run("Multiply...", "value=255");
+run("Convert to Mask");
+floodFill(2000, 500);
+run("Erode");
+run("Erode");
+run("Erode");
+run("Erode");
+run("Erode");
+run("Erode");
+//run("Convert to Mask");
+fn = getTitle();
+fn = substring( fn, 0, indexOf(fn, "_boundary")) + "_phallo.tif"
+save( "/Users/sstoma/Projects/21-01-29-malwina/_data/21-09-21/_full/masks/" + fn);

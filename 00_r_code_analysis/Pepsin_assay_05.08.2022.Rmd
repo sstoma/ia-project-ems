@@ -1,0 +1,875 @@
+---
+title: "Modifications of corneal cross-linking protocols- pepsin assay"
+author: "Malwina Kowlaska"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+library("tidyverse")
+library("RColorBrewer")
+library("DescTools")
+library("multcomp")
+library("lmtest")
+library(readxl)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r, include=FALSE}
+#directory
+setwd("C:/Users/yoga/OneDrive - Universität Zürich UZH/backup/Work/Lab_UZH/PepsinDigestion/New")
+
+Dat<-read_excel("DataAll.xlsx")
+CCT<-read_excel("DataCCT.xlsx")
+```
+
+
+```{r, include=FALSE}
+## CCT data in=mputation ##
+which(CCT$mm == 7)
+
+CCT[241,4] <- NA
+CCT[242,4] <- NA
+CCT[243,4] <- NA
+CCT[244,4] <- NA
+CCT[245,4] <- NA
+CCT[246,4] <- NA
+CCT[247,4] <- NA
+CCT[248,4] <- NA
+CCT[249,4] <- NA
+CCT[250,4] <- NA
+CCT[251,4] <- NA
+CCT[252,4] <- NA
+CCT[253,4] <- NA
+CCT[254,4] <- NA
+CCT[255,4] <- NA
+CCT[256,4] <- NA
+CCT[257,4] <- NA
+CCT[258,4] <- NA
+CCT[259,4] <- NA
+CCT[260,4] <- NA
+
+CCT[764,4] <- NA
+CCT[765,4] <- NA
+CCT[766,4] <- NA
+CCT[767,4] <- NA
+CCT[768,4] <- NA
+CCT[769,4] <- NA
+CCT[770,4] <- NA
+CCT[771,4] <- NA
+CCT[772,4] <- NA
+CCT[773,4] <- NA
+CCT[774,4] <- NA
+CCT[775,4] <- NA
+CCT[776,4] <- NA
+CCT[777,4] <- NA
+CCT[778,4] <- NA
+CCT[779,4] <- NA
+CCT[780,4] <- NA
+CCT[781,4] <- NA
+CCT[782,4] <- NA
+CCT[783,4] <- NA
+
+CCT[794,4] <- NA
+CCT[901,4] <- NA
+```
+
+```{r, echo= FALSE, include=FALSE}
+library(missForest)
+
+CCT$Tx<- as.factor(CCT$Tx)
+CCT$CCT<- as.factor(CCT$CCT)
+
+apply(CCT,2,function(x) sum(is.na(x)))
+CCT.r <- CCT[,c(3:5,8,10)]
+
+dim(CCT.r)
+str(CCT.r)
+
+CCT.r <- as.data.frame(CCT.r)
+
+set.seed(12345689)
+CCT.imp <- missForest(CCT.r, verbose = TRUE, variablewise = TRUE) 
+CCT.imp$OOBrerror
+
+CCT.i <- CCT.imp$ximp
+
+CCT.i$mm[241]
+CCT.i$mm[783]
+
+apply(CCT.i,2,function(x) sum(is.na(x)))
+
+CCT.i$DW <- CCT$DW
+CCT.i$Ex <-CCT$Ex
+CCT.i$DW<-as.factor(CCT.i$DW)
+str(CCT.i)
+```
+
+```{r, echo=FALSE, include=FALSE}
+CCTA<- CCT.i %>%
+  filter(Ex=="Acc") %>%
+  ggplot(aes(x= Tx, y= mm, color=CCT))+
+  geom_boxplot()+
+  theme_bw()+
+  ylim(500,1000)+ #yaxixs limits
+  theme(legend.position = "right")+
+  theme(text = element_text(color = "black"),
+        plot.subtitle=element_text(size=12),
+        axis.title= element_text(size=10),
+        axis.text.x = element_text(size = 10, colour = "black"),
+        axis.text.y = element_text(size = 10), 
+        strip.background = element_rect(fill="grey"),
+        strip.text = element_text(size = 10),
+        axis.title.x = element_blank(), # remove x axis title
+        panel.grid.major.x = element_blank(),# remove vertical lines
+        panel.grid.minor = element_blank(), #remove part of a grid
+        legend.position = "none" 
+        )+
+  labs(title="Acceleration", 
+       y=expression("Thicknes"~(mu*m)), x="Treatment group") +
+  scale_color_manual(values=c("#dfc27d", "#018571"))+ 
+  scale_x_discrete (limits=c("0","300","1","20"),
+                    labels=c("Control","30 min","10 min","2 min"))
+
+CCTB<- CCT.i %>%
+  filter(Ex=="B2") %>%
+  ggplot(aes(x= Tx, y= mm, color=CCT))+
+  geom_boxplot()+
+  theme_minimal()+
+  theme_bw() +
+  ylim(500,1000)+
+  theme(text = element_text( color = "black"),
+        plot.subtitle=element_text(size=10),
+        axis.title= element_text(size=10),
+        axis.text.x = element_text(size = 10, colour = "black"),
+        axis.text.y = element_text(size = 10), 
+        strip.background = element_rect(fill="grey"),
+        strip.text = element_text(size = 10),
+        axis.title.x = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position = "none" #remove legend
+        )+
+  labs(title="Riboflavin concentration", 
+       y=expression("Thicknes"~(mu*m)), x="Treatment group") +
+  scale_color_manual(values=c("#dfc27d", "#018571"))+ 
+  scale_x_discrete (labels = c('Control',expression(0.1 ~B[2]),expression(0.1 ~B[2]+~D[2]~O), expression(0.4 ~B[2]), expression(0.4 ~B[2]+~D[2]~O)))
+
+CCTE<- CCT.i %>%
+  filter(Ex %in% c('En1','En2')) %>%
+  ggplot(aes(x= Tx, y= mm, color=CCT))+
+  geom_boxplot()+
+  theme_bw()+
+  ylim(500,1000)+
+  theme(text = element_text( color = "black"),
+        plot.subtitle=element_text(size=12),
+        axis.title= element_text(size=10),
+        axis.text.x = element_text(size = 10, colour = "black"),
+        axis.text.y = element_text(size = 10), 
+        strip.background = element_rect(fill="grey"),
+        strip.text = element_text(size = 10),
+        axis.title.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position = "none" #remove legend
+        )+
+  labs(title="Fluence",
+       y=expression("Thicknes"~(mu*m)), x="Treatment group") +
+  scale_color_manual(values=c("#dfc27d", "#018571"))+ 
+  scale_x_discrete (limits=c("0","1","2","3","4","5","6"), 
+                    labels = c('Control','5.4'~J/cm^2,'10.8'~J/cm^2, '16.2'~J/cm^2, '21.6'~J/cm^2,'27'~J/cm^2, '32.4'~J/cm^2 ))
+
+CCTH<- CCT.i %>%
+  filter(Ex== "D_M") %>%
+  ggplot(aes(x= Tx, y= mm, color=CCT))+
+  geom_boxplot()+
+  theme_bw()+
+  ylim(500,1000)+
+  theme(text = element_text(color = "black"),
+        plot.subtitle=element_text(size=12),
+        axis.title= element_text(size=10),
+        axis.text.x = element_text(size = 10, colour = "black"),
+        axis.text.y = element_text(size = 10), 
+        strip.background = element_rect(fill="grey"),
+        strip.text = element_text(size = 10),
+        panel.grid.major.x = element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.position = "right",
+        legend.key.size = unit(1.5, "cm"), #change legend size
+        legend.key.width = unit(1,"cm")
+        )+
+  labs(title="Carrier agent", 
+       y=expression("Thicknes"~(mu*m)), x="Treatment group") +
+  scale_color_manual(values=c("#dfc27d", "#018571"))+ 
+  scale_x_discrete (labels = c('Control','Dextran', 'HPMS'))
+
+CCTR<- CCT.i %>%
+  filter(Ex== "Rep") %>%
+  ggplot(aes(x= Tx, y= mm, color=CCT))+
+  geom_boxplot()+
+  theme_bw()+
+  ylim(500,1000)+
+  theme(text = element_text(color = "black"),
+        plot.subtitle=element_text(size=12),
+        axis.title= element_text(size=10),
+        axis.text.x = element_text(size = 10, colour = "black"),
+        axis.text.y = element_text(size = 10), 
+        strip.background = element_rect(fill="grey"),
+        strip.text = element_text(size = 10),
+        panel.grid.major.x = element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.position = "right",
+        legend.key.size = unit(1.5, "cm"), #change legend size
+        legend.key.width = unit(1,"cm")
+        )+
+  labs(title="Replacemnet", 
+       y=expression("Thicknes"~(mu*m)), x="Treatment group") +
+  scale_color_manual(values=c("#dfc27d", "#018571"))+ 
+  scale_x_discrete (limits=c("0","yes_r","no_r"),
+                    labels = c('Control','YES','NO'))
+```
+
+#CCT
+
+##Graphs
+```{r, echo=FALSE}
+library("cowplot")
+
+plot_grid(CCTA, CCTB, CCTE, CCTH,CCTR,
+          labels = c("A", "B", "C", "D", "e"),
+          ncol = 1, nrow = 4)
+```
+
+##Summary 
+
+CCTA before saturation with riboflavin
+CCTB after saturation with riboflavin
+```{r, include=FALSE}
+CCT.i$Group<-as.factor(CCT.i$Group)
+
+CorneaA <- CCT.i %>%
+  filter(CCT == "CCTA")
+
+CorneaB <- CCT.i %>%
+  filter(CCT == "CCTB")
+```
+
+```{r, echo=FALSE}
+CorneaA %>%
+  group_by(Ex, Tx) %>%
+  summarise(SD = sd(mm), Mean= mean(mm), Min= min(mm), Max=max(mm))
+```
+```{r, echo=FALSE}
+CorneaB %>%
+  group_by(Ex, Tx) %>%
+  summarise(SD = sd(mm), Mean= mean(mm), Min= min(mm), Max=max(mm))
+```
+
+#Acceleration
+
+- 0- control
+- 2- 2min, total delivered energy 5.4 J/cm2
+- 10- 10 min, total delivered energy 5.4 J/cm2
+- 30- 30min, total delivered energy 5.4 J/cm2
+
+```{r, include=FALSE}
+Dat[c(3,7:9,11)] <- lapply(Dat[c(3,7:9,11)], factor)
+
+Acc <- Dat %>%
+  filter(Ex == "Acc")
+
+str(Acc)
+summary(Acc)
+
+Day8 <- subset(Acc, DW == 8)
+Day16 <- subset(Acc, DW== 16)
+```
+
+*Is there a difference in CCTB between treatment groups*
+```{r, echo=FALSE}
+TukeyHSD(aov(data = Day8, CCTB~Tx))
+TukeyHSD(aov(data = Day16, CCTB~Tx))
+```
+
+###Weight
+- Weight of samples day 8
+```{r, echo=FALSE}
+Day8 %>%
+  group_by(Tx) %>%
+  summarize(Mean=mean(Sample),sdSample=sd(Sample), Minimum=min(Sample), Maximum=max(Sample), count = n())
+```
+
+- Weight of samples day 16
+```{r, echo=FALSE}
+Day16 %>%
+  group_by(Tx) %>%
+  summarize(Mean=mean(Sample),sdSample=sd(Sample), Minimum=min(Sample), Maximum=max(Sample), count = n())
+```
+
+###Modeling
+- **Model day 8 WEIGHT**
+```{r,}
+mod1<-lm(Sample ~ Tx + CCTB + Group, data=Day8)
+summary(mod1)
+```
+
+- Confidence intervals
+```{r, echo=FALSE}
+confint(mod1)
+```
+
+- Diferences between treatment groups
+```{r, echo=FALSE}
+mul <- glht(mod1, linfct = mcp(Tx = "Tukey")) # replace Tukey with Dunnett
+summary(mul)
+```
+
+- **Model day 16 WEIGHT**
+```{r}
+mod2<-lm(Sample ~ Tx + CCTB + Group, data=Day16)
+summary(mod2)
+```
+
+- Confidence Intervals
+```{r, echo=FALSE}
+confint(mod2)
+```
+
+- Difrences between treatment groups
+```{r, echo=FALSE}
+mul <- glht(mod2, linfct = mcp(Tx = "Tukey")) # replace Tukey with Dunnett
+summary(mul)
+```
+
+###Models assumption check
+
+- Day 8
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(mod1)
+```
+
+- Day 16
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(mod2)
+```
+
+###Plots
+```{r, include=FALSE}
+levels(Acc$DW)[levels(Acc$DW)=="8"] <- "Day 8"
+levels(Acc$DW)[levels(Acc$DW)=="16"] <- "Day 16"
+```
+
+```{r, echo=FALSE}
+Acc %>%
+  ggplot(aes(x= factor(Tx, level = c("0","300","1", "20")) , y= Sample, group=Tx))+
+  geom_boxplot(size=1) +
+  theme_bw() +
+  theme(text = element_text(color = "black"),
+        plot.title=element_text(size=20, vjust = - 11, hjust = 0.07, face= "bold"),
+        plot.subtitle=element_text(size=12),
+        axis.title= element_text(size=16),
+        axis.text.x = element_text(size = 16, face="bold", colour = "black"),
+        axis.text.y = element_text(size = 16), 
+        strip.background = element_rect(fill="grey"),
+        strip.text = element_text(size = 18),
+        axis.title.x = element_blank(), # remove x axis title
+        panel.grid.major.x = element_blank() # remove vertical lines
+        )+
+  labs(title="Acceleration",
+       x=expression("Treatment group"),
+       y=expression("Weight"~(mu*g)))+
+  scale_x_discrete (labels=c("Control","30 min","10 min","2 min")) + 
+  facet_grid (DW~., scales="free_y")
+```
+
+#Fluence
+
+Six energy modifications (treatment groups): 
+
+- 0- control
+- 1- 5.4 J/cm2
+- 2- 10.8 J/cm2
+- 3- 16.2 J/cm2
+- 4- 21.6 J/cm2
+- 5- 27 J/cm2
+- 6- 32.4 J/cm2
+
+Energy experiment was performed in two parts. 
+
+- In the first part 5.4 J/cm2, 10.8 J/cm2, 16.2 J/cm2 
+- In the second part 16.2 J/cm2, 21.6 J/cm2, 27 J/cm2, 32.4 J/cm2 
+
+```{r, include=FALSE}
+En<-Dat%>%
+  filter(Ex %in% c('En1','En2'))
+
+En8 <- subset(En, DW == 8)
+En16 <- subset(En, DW== 16)
+```
+
+###Weight
+- Weight of samples day 8
+```{r, echo=FALSE}
+En8 %>%
+  group_by(Tx) %>%
+  summarize(Mean=mean(Sample),SD=sd(Sample), Minimum=min(Sample), Maximum=max(Sample),count = n())
+```
+
+- Weight of samples day 16
+```{r, echo=FALSE}
+En16 %>%
+  group_by(Tx) %>%
+  summarize(Mean=mean(Sample),SD=sd(Sample), Minimum=min(Sample), Maximum=max(Sample),count = n())
+
+```
+
+###Model building
+
+- **DAY8**
+```{r, echo=FALSE}
+mod8<-lm(Sample ~ Tx + CCTB + Group, data=En8)
+summary(mod8)
+```
+
+- confident interval
+```{r, echo=FALSE}
+confint(mod8)
+```
+
+- group comparison
+```{r, echo=FALSE}
+mul <- glht(mod8, linfct = mcp(Tx = "Tukey")) # replace Tukey with Dunnett
+summary(mul)
+```
+
+- **DAY 16**
+```{r, echo=FALSE}
+mod16<-lm(Sample ~ Tx + CCTB + Group, data=En16)
+summary(mod16)
+```
+
+- Conf Intervals
+```{r, echo=FALSE}
+confint(mod16)
+```
+
+- group comparison
+```{r, echo=FALSE}
+mul <- glht(mod16, linfct = mcp(Tx = "Tukey")) # replace Tukey with Dunnett
+summary(mul)
+```
+
+###Models assumption check
+
+- Day 8
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(mod8)
+```
+
+- Day 16
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(mod16)
+```
+
+###Plots
+```{r, echo=FALSE, include=FALSE}
+levels(En$DW)[levels(En$DW)=="8"] <- "Day 8"
+levels(En$DW)[levels(En$DW)=="16"] <- "Day 16"
+```
+
+```{r, echo=FALSE}
+PlotE<-En %>%
+  ggplot(aes(x= Tx, y= Sample, group=Tx))+
+  geom_boxplot(size=1)+
+  theme_bw() +
+  theme(text = element_text(color = "black"),
+        plot.title=element_text(size=20, vjust = - 11, hjust = 0.07, face= "bold"),
+        plot.subtitle=element_text(size=12),
+        axis.title= element_text(size=16),
+        axis.text.x = element_text(size = 16, face="bold", colour = "black"),
+        axis.text.y = element_text(size = 16), 
+        strip.background = element_rect(fill="grey"),
+        strip.text = element_text(size = 18),
+         panel.grid.major.x = element_blank() # remove vertical lines
+        )+
+  labs(title="Fluence",
+       x=expression("Treatment group"),
+       y=expression("Weight"~(mu*g)))+
+  scale_x_discrete(labels = c('Control','5.4'~J/cm^2,'10.8'~J/cm^2, '16.2'~J/cm^2, '21.6'~J/cm^2,'27'~J/cm^2, '32.4'~J/cm^2 ))+
+  facet_grid (DW~., scales="free_y")
+
+ggsave("PlotE.png", width = 22,
+  height = 14,
+  units = c( "cm"))
+
+PlotE
+
+```
+
+# Riboflavin concentration and D20 supplementation
+
+```{r, echo=FALSE, include=FALSE}
+B2 <- Dat %>%
+  filter(Ex == "B2")
+
+Day8 <- subset(B2, DW == 8)
+Day16 <- subset(B2, DW== 16)
+```
+
+###Weight
+- Weight of samples day 8
+```{r, echo=FALSE}
+Day8 %>%
+  group_by(Tx) %>%
+  summarize(Mean=mean(Sample),sdSample=sd(Sample), Minimum=min(Sample), Maximum=max(Sample), count = n())
+```
+
+- Weight of samples day 16
+```{r, echo=FALSE}
+Day16 %>%
+  group_by(Tx) %>%
+  summarize(Mean=mean(Sample),sdSample=sd(Sample), Minimum=min(Sample), Maximum=max(Sample), count = n())
+```
+
+### Model
+
+- **Model day 8 WEIGHT**
+```{r,}
+mod1<-lm(Sample ~ Tx + CCTB + Group, data=Day8)
+summary(mod1)
+```
+
+- Confidence intervals
+```{r, echo=FALSE}
+confint(mod1)
+```
+
+- Diferences between treatment groups
+```{r, echo=FALSE}
+mul <- glht(mod1, linfct = mcp(Tx = "Tukey")) # replace Tukey with Dunnett
+summary(mul)
+```
+
+- **Model day 16 WEIGHT**
+```{r}
+mod2<-lm(Sample ~ Tx + CCTB + Group, data=Day16)
+summary(mod2)
+```
+
+- Confidence Intervals
+```{r, echo=FALSE}
+confint(mod2)
+```
+
+- Difrences between treatment groups
+```{r, echo=FALSE}
+mul <- glht(mod2, linfct = mcp(Tx = "Tukey")) # replace Tukey with Dunnett
+summary(mul)
+```
+
+###Models assumption check
+
+- Day 8
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(mod1)
+```
+
+- Day 16
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(mod2)
+```
+
+###Plots
+```{r, include=FALSE}
+levels(B2$DW)[levels(B2$DW)=="8"] <- "Day 8"
+levels(B2$DW)[levels(B2$DW)=="16"] <- "Day 16"
+```
+
+```{r, echo=FALSE}
+PlotB<- B2 %>%
+  ggplot(aes(x= Tx, y= Sample, group=Tx))+
+  geom_boxplot(size=1) +
+  theme_bw() +
+  theme(text = element_text( color = "black"),
+        plot.title=element_text(size=20, vjust = - 11, hjust = 0.07, face= "bold"),
+        plot.subtitle=element_text(size=12),
+        axis.title= element_text(size=16),
+        axis.text.x = element_text(size = 16, face="bold", colour = "black"),
+        axis.text.y = element_text(size = 16), 
+        strip.background = element_rect(fill="grey"),
+        strip.text = element_text(size = 18),
+        axis.title.x = element_blank(), # remove x axis title
+        panel.grid.major.x = element_blank() # remove vertical lines
+        )+
+  labs(title="Rabioflavin concentration",
+       x=expression("Treatment group"),
+       y=expression("Weight"~(mu*g)))+
+  scale_x_discrete(labels = c('Control',expression(0.1 ~B[2]),expression(0.1 ~B[2]+ ~D[2]~O), expression(0.4 ~B[2]), expression(0.4 ~B[2]+ ~D[2]~O)))+
+  facet_grid (DW~., scales="free_y")
+
+PlotB
+```
+
+#Riboflavin carrier
+
+```{r, include=FALSE}
+D_M <- Dat %>%
+  filter(Ex == "D_M")
+
+Day8 <- subset(D_M, DW == 8)
+Day16 <- subset(D_M, DW== 16)
+```
+
+*Is there a difference in CCTB between treatment groups*
+
+- day 16 only to control group
+```{r, echo=FALSE}
+TukeyHSD(aov(data = Day8, CCTB~Tx))
+TukeyHSD(aov(data = Day16, CCTB~Tx))
+```
+
+###Weight
+- Weight of samples day 8
+```{r, echo=FALSE}
+Day8 %>%
+  group_by(Tx) %>%
+  summarize(Mean=mean(Sample),sdSample=sd(Sample), Minimum=min(Sample), Maximum=max(Sample), count = n())
+```
+
+- Weight of samples day 16
+```{r, echo=FALSE}
+Day16 %>%
+  group_by(Tx) %>%
+  summarize(Mean=mean(Sample),sdSample=sd(Sample), Minimum=min(Sample), Maximum=max(Sample), count = n())
+```
+
+###Model
+- **Model day 8 WEIGHT**
+```{r,}
+mod1<-lm(Sample ~ Tx + CCTB + Group, data=Day8)
+summary(mod1)
+```
+
+-Confidence intervals
+```{r, echo=FALSE}
+confint(mod1)
+```
+
+- Diferences between treatment groups
+```{r, echo=FALSE}
+mul <- glht(mod1, linfct = mcp(Tx = "Tukey")) # replace Tukey with Dunnett
+summary(mul)
+```
+
+- **Model day 16 WEIGHT**
+```{r}
+mod2<-lm(Sample ~ Tx + CCTB + Group, data=Day16)
+summary(mod2)
+```
+
+- Confidence Intervals
+```{r, echo=FALSE}
+confint(mod2)
+```
+
+- Difrences between treatment groups
+```{r, echo=FALSE}
+mul <- glht(mod2, linfct = mcp(Tx = "Tukey")) # replace Tukey with Dunnett
+summary(mul)
+```
+
+###Models assumption check
+
+- Day 8
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(mod1)
+```
+
+- Day 16
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(mod2)
+```
+
+###Plots
+```{r, echo=FALSE}
+D_M %>%
+  ggplot(aes(x= factor(Tx, level = c("dext","hpms")) , y= Sample, group=Tx))+
+  geom_boxplot(size=1) +
+  theme_bw() +
+  theme(text = element_text(color = "black"),
+        plot.title=element_text(size=20, vjust = - 11, hjust = 0.07, face= "bold"),
+        plot.subtitle=element_text(size=12),
+        axis.title= element_text(size=16),
+        axis.text.x = element_text(size = 16, face="bold", colour = "black"),
+        axis.text.y = element_text(size = 16), 
+        strip.background = element_rect(fill="grey"),
+        strip.text = element_text(size = 18),
+        axis.title.x = element_blank(), # remove x axis title
+        panel.grid.major.x = element_blank() # remove vertical lines
+        )+
+  labs(title="Riboflavin Carrier",
+       x=expression("Treatment group"),
+       y=expression("Weight"~(mu*g)))+
+  scale_x_discrete (labels=c("Control","Dextran","HMPC")) + 
+  facet_grid (DW~., scales="free_y")
+```
+
+
+##Riboflavin replenishment
+
+```{r, include=FALSE}
+Rep <- Dat %>%
+  filter(Ex == "Rep")
+
+Day8 <- subset(Rep, DW == 8)
+Day16 <- subset(Rep, DW== 16)
+```
+
+*Is there a difference in CCTB between treatment groups*
+
+- day 16 only to control group
+```{r, echo=FALSE}
+TukeyHSD(aov(data = Day8, CCTB~Tx))
+TukeyHSD(aov(data = Day16, CCTB~Tx))
+```
+
+###Weight
+
+- Weight of samples day 8
+```{r, echo=FALSE}
+Day8 %>%
+  group_by(Tx) %>%
+  summarize(Mean=mean(Sample),sdSample=sd(Sample), Minimum=min(Sample), Maximum=max(Sample), count = n())
+```
+
+- Weight of samples day 16
+```{r, echo=FALSE}
+Day16 %>%
+  group_by(Tx) %>%
+  summarize(Mean=mean(Sample),sdSample=sd(Sample), Minimum=min(Sample), Maximum=max(Sample), count = n())
+```
+
+###Model
+
+- **Model day 8 WEIGHT**
+```{r,}
+mod1<-lm(Sample ~ Tx + CCTB, data=Day8)
+summary(mod1)
+```
+
+- Confidence intervals
+```{r, echo=FALSE}
+confint(mod1)
+```
+
+- Diferences between treatment groups
+```{r, echo=FALSE}
+mul <- glht(mod1, linfct = mcp(Tx = "Tukey")) # replace Tukey with Dunnett
+summary(mul)
+```
+
+- **Model day 16 WEIGHT**
+```{r}
+mod2<-lm(Sample ~ Tx + CCTB, data=Day16)
+summary(mod2)
+```
+
+- Confidence Intervals
+```{r, echo=FALSE}
+confint(mod2)
+```
+
+- Difrences between treatment groups
+```{r, echo=FALSE}
+mul <- glht(mod2, linfct = mcp(Tx = "Tukey")) # replace Tukey with Dunnett
+summary(mul)
+```
+
+###Models assumption check
+
+- Day 8
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(mod1)
+```
+
+- Day 16
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(mod2)
+```
+
+```{r, include=FALSE}
+levels(Rep$DW)[levels(Rep$DW)=="8"] <- "Day 8"
+levels(Rep$DW)[levels(Rep$DW)=="16"] <- "Day 16"
+```
+
+###Plots
+```{r, echo=FALSE}
+Rep %>%
+  ggplot(aes(x= factor(Tx, level = c("0","yes_r","no_r")) , y= Sample, group=Tx))+
+  geom_boxplot(size=1) +
+  theme_bw() +
+  theme(text = element_text(color = "black"),
+        plot.title=element_text(size=20, vjust = - 11, hjust = 0.07, face= "bold"),
+        plot.subtitle=element_text(size=12),
+        axis.title= element_text(size=16),
+        axis.text.x = element_text(size = 16, face="bold", colour = "black"),
+        axis.text.y = element_text(size = 16), 
+        strip.background = element_rect(fill="grey"),
+        strip.text = element_text(size = 18),
+        axis.title.x = element_blank(), # remove x axis title
+        panel.grid.major.x = element_blank() # remove vertical lines
+        )+
+  labs(title="Replenishmet",
+       x=expression("Treatment group"),
+       y=expression("Weight"~(mu*g)))+
+  scale_x_discrete (labels=c("Control","Yes","No")) + 
+  facet_grid (DW~., scales="free_y")
+```
+
+
+#Temperature
+
+```{r, include=FALSE}
+Temp <- read_excel("C:\\Users\\yoga\\OneDrive - Universität Zürich UZH\\backup\\Work\\Lab_UZH\\PepsinDigestion\\New\\Data\\Temp.xlsx")
+```
+
+```{r, include=FALSE}
+Temp$Dose<-as.factor(Temp$Dose)
+Temp$Eye<-as.factor(Temp$Eye)
+```
+
+```{r, echo=FALSE}
+Temp1<-subset(Temp, Analysis==1)
+
+t1<-Temp1 %>%
+  ggplot(aes(x=Dose, y=Temp, color= Eye, group=Eye))+
+  geom_point(size=2)+
+  geom_line(size=0.7)+
+  scale_color_manual(values=c("#a6611a", "#dfc27d", "#80cdc1",
+                              "#018571", "#000000"))+
+  theme_bw()+
+  theme(legend.position = "bottom")+
+  theme(plot.title = element_text(size = 10, face = "bold"),
+        legend.title=element_text(size=10), 
+        legend.text=element_text(size=10), 
+        panel.grid.major.x = element_blank(),# remove vertical lines
+        panel.grid.minor = element_blank(),
+        legend.key.size = unit(1.5, "cm"), #change legend size
+        legend.key.width = unit(3,"cm")
+        )
+t1
+```
